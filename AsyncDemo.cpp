@@ -142,7 +142,7 @@ BOOL CALLBACK AsyncURL(HWND hX, UINT message, WPARAM wParam,
 			rcContext.nURL = IDC_URL1;
 			rcContext.nHeader = IDC_Header1;
 			rcContext.nResource = IDC_Resource1;
-			sprintf(rcContext.szMemo, "AsyncURL(%d)", rcContext.nURL);
+			sprintf_s(rcContext.szMemo, "AsyncURL(%d)", rcContext.nURL);
 
 			//change the cursor back to normal
 			SetCursor(LoadCursor(NULL,IDC_ARROW));
@@ -214,7 +214,7 @@ void AsyncDirect (REQUEST_CONTEXT *prcContext, HINTERNET hOpen)
 	GetDlgItemText(prcContext->hWindow,prcContext->nURL,szURL,256);
 	
 	//update the memo in the REQUEST_CONTEXT structure
-	sprintf(prcContext->szMemo, "AsyncDirect(%s)(%d):", szURL, prcContext->nURL);
+	sprintf_s(prcContext->szMemo, "AsyncDirect(%s)(%d):", szURL, prcContext->nURL);
 
 	//call InternetOpenUrl
 	prcContext->hResource = InternetOpenUrl(hOpen, szURL, NULL, 0, 0, (DWORD)prcContext);
@@ -225,11 +225,10 @@ void AsyncDirect (REQUEST_CONTEXT *prcContext, HINTERNET hOpen)
 		if (GetLastError() != ERROR_IO_PENDING)
 		{
 			//reuse the URL buffer for the error information
-			sprintf(szURL,"Error %d encountered.",GetLastError());
+			sprintf_s(szURL,"Error %d encountered.",GetLastError());
 
 			//write error to resource edit box
-			SetDlgItemText(prcContext->hWindow, prcContext->nResource,
-				szURL);
+			SetDlgItemText(prcContext->hWindow, prcContext->nResource, szURL);
 		}
 	}
 
@@ -254,7 +253,7 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 	DWORD dwStatusInformationLength)
 {
 	REQUEST_CONTEXT *cpContext;
-	char szBuffer[256 + INTERNET_MAX_URL_LENGTH] = "";
+	char szBuffer[256 + INTERNET_MAX_URL_LENGTH];
 	cpContext = (REQUEST_CONTEXT*)dwContext;
 
 
@@ -262,7 +261,7 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 	{
 	case INTERNET_STATUS_CLOSING_CONNECTION:
 		//Closing the connection to the server. The lpvStatusInformation parameter is NULL.
-		sprintf(szBuffer, "CLOSING_CONNECTION");
+		sprintf_s(szBuffer, "CLOSING_CONNECTION");
 		break;
 
 	case INTERNET_STATUS_CONNECTED_TO_SERVER:
@@ -272,11 +271,11 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 			SOCKADDR *lpSockAddr = (SOCKADDR *)lpvStatusInformation;
 			if (lpSockAddr)
 			{
-				sprintf(szBuffer, "CONNECTED_TO_SERVER SockAddr : %s", lpvStatusInformation);
+				sprintf_s(szBuffer, "CONNECTED_TO_SERVER SockAddr : %s", (char *)lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer, "CONNECTED_TO_SERVER");
+				sprintf_s(szBuffer, "CONNECTED_TO_SERVER");
 			}
 		}
 		break;
@@ -288,18 +287,18 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 			SOCKADDR *lpSockAddr = (SOCKADDR *)lpvStatusInformation;
 			if (lpSockAddr)
 			{
-				sprintf(szBuffer, "CONNECTING_TO_SERVER SockAddr : %s", lpvStatusInformation);
+				sprintf_s(szBuffer, "CONNECTING_TO_SERVER SockAddr : %s", (char *)lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer, "CONNECTED_TO_SERVER ");
+				sprintf_s(szBuffer, "CONNECTED_TO_SERVER ");
 			}
 		}
 		break;
 
 	case INTERNET_STATUS_CONNECTION_CLOSED:
 		//Successfully closed the connection to the server. The lpvStatusInformation parameter is NULL.
-		sprintf(szBuffer, "CONNECTION_CLOSED ");
+		sprintf_s(szBuffer, "CONNECTION_CLOSED ");
 		break;
 
 	case INTERNET_STATUS_COOKIE_RECEIVED:
@@ -310,11 +309,11 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 		{
 			if (lpvStatusInformation)
 			{
-				sprintf(szBuffer, "COOKIE_RECEIVED. Number : %d", (DWORD *)lpvStatusInformation);
+				sprintf_s(szBuffer, "COOKIE_RECEIVED. Number : %u", *(DWORD *)lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer, "COOKIE_RECEIVED ");
+				sprintf_s(szBuffer, "COOKIE_RECEIVED ");
 			}
 		}
 		break;
@@ -326,11 +325,11 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 		{
 			if (lpvStatusInformation)
 			{
-				sprintf(szBuffer, "COOKIE_SENT. Number : %d", (DWORD *)lpvStatusInformation);
+				sprintf_s(szBuffer, "COOKIE_SENT. Number : %u", *(DWORD *)lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer, "COOKIE_SENT ");
+				sprintf_s(szBuffer, "COOKIE_SENT ");
 			}
 		}
 		break;
@@ -353,23 +352,23 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 				//fRejected If true, the cookies was rejected.
 
 				InternetCookieHistory *ICH = (InternetCookieHistory*)lpvStatusInformation;
-				sprintf(szBuffer, "COOKIE_HISTORY (%X)", lpvStatusInformation);
+				sprintf_s(szBuffer, "COOKIE_HISTORY (%X)", (unsigned int)lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer, "COOKIE_HISTORY ");
+				sprintf_s(szBuffer, "COOKIE_HISTORY ");
 			}
 		}
 		break;
 
 	case INTERNET_STATUS_CTL_RESPONSE_RECEIVED:
 		//Not implemented.
-		sprintf(szBuffer, "CTL_RESPONSE_RECEIVED ");
+		sprintf_s(szBuffer, "CTL_RESPONSE_RECEIVED ");
 		break;
 
 	case INTERNET_STATUS_DETECTING_PROXY:
 		//Notifies the client application that a proxy has been detected.
-		sprintf(szBuffer, "DETECTING_PROXY ");
+		sprintf_s(szBuffer, "DETECTING_PROXY ");
 		break;
 
 	case INTERNET_STATUS_HANDLE_CLOSING:
@@ -379,13 +378,13 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 
 			if (lpInternetAsyncResult != NULL)
 			{
-				sprintf(szBuffer, "HANDLE_CLOSING Result: %X Error : %X", lpInternetAsyncResult->dwResult, lpInternetAsyncResult->dwError);
+				sprintf_s(szBuffer, "HANDLE_CLOSING Result: %X Error : %X", lpInternetAsyncResult->dwResult, lpInternetAsyncResult->dwError);
 			}
 			else
 			{
-				sprintf(szBuffer, "HANDLE_CLOSING (%d)",  dwStatusInformationLength);
+				sprintf_s(szBuffer, "HANDLE_CLOSING (%d)",  dwStatusInformationLength);
 			}
-			sprintf(cpContext->szMemo, "Closed");
+			sprintf_s(cpContext->szMemo, "Closed");
 			hButton = GetDlgItem(cpContext->hWindow, IDC_Download);	
 			EnableWindow(hButton, 1);
 		}
@@ -425,17 +424,17 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 			INTERNET_ASYNC_RESULT *lpInternetAsyncResult = (INTERNET_ASYNC_RESULT*)lpvStatusInformation;
 			if (lpInternetAsyncResult != NULL)
 			{
-				sprintf(szBuffer, "HANDLE_CREATED Result: %X Error : %X", lpInternetAsyncResult->dwResult, lpInternetAsyncResult->dwError);
+				sprintf_s(szBuffer, "HANDLE_CREATED Result: %X Error : %X", lpInternetAsyncResult->dwResult, lpInternetAsyncResult->dwError);
 			}
 			else
 			{
-				sprintf(szBuffer, "HANDLE_CREATED ");
+				sprintf_s(szBuffer, "HANDLE_CREATED ");
 			}
 		}
 		break;
 	case INTERNET_STATUS_INTERMEDIATE_RESPONSE:
 		//Received an intermediate (100 level) status code message from the server.
-		sprintf(szBuffer, "INTERMEDIATE_RESPONSE ");
+		sprintf_s(szBuffer, "INTERMEDIATE_RESPONSE ");
 		break;
 
 	case INTERNET_STATUS_NAME_RESOLVED:
@@ -443,39 +442,47 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 			//Successfully found the IP address of the name contained in lpvStatusInformation.
 			if (lpvStatusInformation)
 			{
-				sprintf(szBuffer, "NAME_RESOLVED : %s", lpvStatusInformation);
+				sprintf_s(szBuffer, "NAME_RESOLVED : %s", (char *)lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer, "NAME_RESOLVED ");
+				sprintf_s(szBuffer, "NAME_RESOLVED ");
 			}
 		}
 		break;
 
 	case INTERNET_STATUS_P3P_HEADER:
 		//The response has a P3P header in it.
-		sprintf(szBuffer, "P3P_HEADER ");
+		sprintf_s(szBuffer, "P3P_HEADER ");
+		if (lpvStatusInformation)
+		{
+			sprintf_s(szBuffer, "P3P_HEADER : %s", (char *)lpvStatusInformation);
+		}
+		else
+		{
+			sprintf_s(szBuffer, "P3P_HEADER ");
+		}
 		break;
 
 	case INTERNET_STATUS_P3P_POLICYREF:
 		//Not implemented
-		sprintf(szBuffer, "P3P_POLICYREF ");
+		sprintf_s(szBuffer, "P3P_POLICYREF ");
 		break;
 
 	case INTERNET_STATUS_PREFETCH:
 		//Not implemented
-		sprintf(szBuffer, "PREFETCH ");
+		sprintf_s(szBuffer, "PREFETCH ");
 		break;
 
 	case INTERNET_STATUS_PRIVACY_IMPACTED:
 		//Not implemented
-		sprintf(szBuffer, "PRIVACY_IMPACTED (%d)",
+		sprintf_s(szBuffer, "PRIVACY_IMPACTED (%d)",
 			 dwStatusInformationLength);
 		break;
 
 	case INTERNET_STATUS_RECEIVING_RESPONSE:
 		//Waiting for the server to respond to a request. The lpvStatusInformation parameter is NULL.
-		sprintf(szBuffer, "RECEIVEING_RESPONSE (%d)",  dwStatusInformationLength);
+		sprintf_s(szBuffer, "RECEIVEING_RESPONSE",  dwStatusInformationLength);
 		break;
 
 	case INTERNET_STATUS_RESPONSE_RECEIVED:
@@ -484,11 +491,11 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 		//The lpvStatusInformation parameter points to a DWORD value that contains the number, in bytes, received.
 			if (lpvStatusInformation)
 			{
-				sprintf(szBuffer, "RESPONSE_RECEIVED : %d bytes", *(DWORD *)lpvStatusInformation);
+				sprintf_s(szBuffer, "RESPONSE_RECEIVED : %d bytes", *(DWORD *)lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer, "RESPONSE_RECEIVED ");
+				sprintf_s(szBuffer, "RESPONSE_RECEIVED ");
 			}
 		}
 		break;
@@ -503,11 +510,11 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 			//This callback is not made if the original request specified INTERNET_FLAG_NO_AUTO_REDIRECT.
 			if (lpvStatusInformation)
 			{
-				sprintf(szBuffer, "STATUS_REDIRECT . New URL: %s", lpvStatusInformation);
+				sprintf_s(szBuffer, "STATUS_REDIRECT . New URL: %s", (char *)lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer, "STATUS_REDIRECT ");
+				sprintf_s(szBuffer, "STATUS_REDIRECT ");
 			}
 		}
 		break;
@@ -517,12 +524,14 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 			if (lpvStatusInformation)
 			{
 				//write the callback information to the buffer
-				sprintf(szBuffer, "REQUEST_COMPLETE Result:%X Error: %X", LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwResult,LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwError);
+				sprintf_s(szBuffer, "REQUEST_COMPLETE Result:%X Error: %X", LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwResult,LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwError);
 				//check for errors
 				if (LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwError == 0)
 				{
 					//check if the completed request is from AsyncDirect
-					if (strtok(cpContext->szMemo, "AsyncDirect"))
+					char *next_token1 = NULL;
+
+					if (strtok_s(cpContext->szMemo, "AsyncDirect", &next_token1))
 					{
 						//set the resource handle to the HINTERNET handle 
 						//returned in the callback
@@ -534,13 +543,13 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 					}
 					else
 					{
-						sprintf(szBuffer, "(%d): REQUEST_COMPLETE (%d)", cpContext->nURL, dwStatusInformationLength);
+						sprintf_s(szBuffer, "(%d): REQUEST_COMPLETE (%d)", cpContext->nURL, dwStatusInformationLength);
 					}
 				}
 			}
 			else
 			{
-				sprintf(szBuffer, "REQUEST_COMPLETE (%d) Error (%d) encountered", dwStatusInformationLength, GetLastError());
+				sprintf_s(szBuffer, "REQUEST_COMPLETE (%d) Error (%d) encountered", dwStatusInformationLength, GetLastError());
 			}
 		}
 		break;
@@ -550,11 +559,11 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 		//The lpvStatusInformation parameter points to a DWORD value that contains the number of bytes sent.
 		if (lpvStatusInformation)
 		{
-			sprintf(szBuffer, "REQUEST_SENT : %d bytes", *(DWORD *)lpvStatusInformation);
+			sprintf_s(szBuffer, "REQUEST_SENT : %d bytes", *(DWORD *)lpvStatusInformation);
 		}
 		else
 		{
-			sprintf(szBuffer, "REQUEST_SENT ");
+			sprintf_s(szBuffer, "REQUEST_SENT ");
 		}
 		break;
 
@@ -563,18 +572,18 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 			//Looking up the IP address of the name contained in lpvStatusInformation.
 			if (lpvStatusInformation)
 			{
-				sprintf(szBuffer, "RESOLVING_NAME : %s", lpvStatusInformation);
+				sprintf_s(szBuffer, "RESOLVING_NAME : %s", (char *)lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer, "RESOLVING_NAME ");
+				sprintf_s(szBuffer, "RESOLVING_NAME ");
 			}
 		}
 		break;
 
 	case INTERNET_STATUS_SENDING_REQUEST:
 		//Sending the information request to the server. The lpvStatusInformation parameter is NULL.
-		sprintf(szBuffer, "SENDING_REQUEST ");
+		sprintf_s(szBuffer, "SENDING_REQUEST ");
 		break;
 
 	case INTERNET_STATUS_STATE_CHANGE:
@@ -602,23 +611,23 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 			switch (dwStatus)
 			{
 			case INTERNET_STATE_CONNECTED:
-				sprintf(szBuffer, "STATE_CHANGE  : STATE_CONNECTED");
+				sprintf_s(szBuffer, "STATE_CHANGE  : STATE_CONNECTED");
 				break;
 			case INTERNET_STATE_DISCONNECTED:
-				sprintf(szBuffer, "STATE_CHANGE  : STATE_DISCONNECTED");
+				sprintf_s(szBuffer, "STATE_CHANGE  : STATE_DISCONNECTED");
 				break;
 			case INTERNET_STATE_DISCONNECTED_BY_USER:
-				sprintf(szBuffer, "STATE_CHANGE  : STATE_DISCONNECTED_BY_USER");
+				sprintf_s(szBuffer, "STATE_CHANGE  : STATE_DISCONNECTED_BY_USER");
 				break;
 			case INTERNET_STATE_BUSY:
-				sprintf(szBuffer, "STATE_CHANGE  : STATE_BUSY");
+				sprintf_s(szBuffer, "STATE_CHANGE  : STATE_BUSY");
 				break;
 
 			case INTERNET_STATUS_USER_INPUT_REQUIRED:
-				sprintf(szBuffer, "STATE_CHANGE  : STATUS_USER_INPUT_REQUIRED");
+				sprintf_s(szBuffer, "STATE_CHANGE  : STATUS_USER_INPUT_REQUIRED");
 				break;
 			default:
-				sprintf(szBuffer, "STATE_CHANGE  : unknown status");
+				sprintf_s(szBuffer, "STATE_CHANGE  : unknown status");
 				break;
 			}
 		}
@@ -627,13 +636,15 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 	default:
 		//write the callback information to the buffer
 		//pierrelc bug %s
-		//sprintf(szBuffer, "Unknown: Status %d Given", dwInternetStatus);
-		sprintf(szBuffer, " Unknown: Status %d Given", dwInternetStatus);
+		//sprintf_s(szBuffer, "Unknown: Status %d Given", dwInternetStatus);
+		sprintf_s(szBuffer, " Unknown: Status %d Given", dwInternetStatus);
 		break;
 	}
 	char szExtraInformation[128];
-	sprintf(szExtraInformation," ( %X / %x) ", lpvStatusInformation, dwStatusInformationLength);
-	strcat(szBuffer, szExtraInformation);
+	sprintf_s(szExtraInformation," ( %X / %x) ", (unsigned int)lpvStatusInformation, (unsigned int)dwStatusInformationLength);
+	szBuffer[strlen(szBuffer)] = '\0';
+	szExtraInformation[strlen(szExtraInformation)] = '\0';
+	strcat_s(szBuffer, sizeof(szBuffer), szExtraInformation);
 
 	//add the callback information to the callback list box
 	SendDlgItemMessage(cpContext->hWindow, IDC_CallbackList,LB_ADDSTRING, 0, (LPARAM)szBuffer);
@@ -663,13 +674,13 @@ DWORD Threader(LPVOID lpvContext)
 	cpContext= (REQUEST_CONTEXT*)lpvContext;
 
 	//set szMemo to the name of the function to be called
-	sprintf(cpContext->szMemo, "Header(%d)", cpContext->nURL);
+	sprintf_s(cpContext->szMemo, "Header(%d)", cpContext->nURL);
 
 	//call the header function
 	Header(cpContext->hWindow, cpContext->nHeader, -1, cpContext->hResource);
 
 	//set szMemo to the name of the function to be called
-	sprintf(cpContext->szMemo, "Dump(%d)", cpContext->nURL);
+	sprintf_s(cpContext->szMemo, "Dump(%d)", cpContext->nURL);
 
 	//call the dump function
 	Dump(cpContext->hWindow, cpContext->nResource, cpContext->hResource);
@@ -712,7 +723,7 @@ retry:
 		//check if the header was not found
 		if (GetLastError()==ERROR_HTTP_HEADER_NOT_FOUND)
 		{
-			sprintf(szError,"Error %d encountered", GetLastError());
+			sprintf_s(szError,"Error %d encountered", GetLastError());
 			SetDlgItemText(hX,intControl, szError);
 			SetCursor(LoadCursor(NULL,IDC_ARROW));
 			return TRUE;
@@ -729,7 +740,7 @@ retry:
 			else
 			{
 				//display other errors in header edit box
-				sprintf(szError,"Error %d encountered", GetLastError());
+				sprintf_s(szError,"Error %d encountered", GetLastError());
 				SetDlgItemText(hX,intControl, szError);
 				SetCursor(LoadCursor(NULL,IDC_ARROW));
 				return FALSE;
@@ -788,8 +799,7 @@ try_again:
 				}
 				goto try_again;
 			}
-			sprintf(szError,"Error %d encountered by InternetQueryDataAvailable",
-				GetLastError());
+			sprintf_s(szError,"Error %d encountered by InternetQueryDataAvailable", GetLastError());
 			SetDlgItemText(hX,intCtrlID, szError);
 			SetCursor(LoadCursor(NULL,IDC_ARROW));
 			break;
@@ -812,8 +822,7 @@ try_again:
 					}
 					goto keep_going;
 				}
-				sprintf(szError,"Error %d encountered by InternetReadFile",
-					GetLastError());
+				sprintf_s(szError,"Error %d encountered by InternetReadFile", GetLastError());
 				SetDlgItemText(hX,intCtrlID, szError);
 				delete[] lpszData;
 				break;
@@ -844,7 +853,7 @@ keep_going:
 				}
 
 				// Adds the new data to the holding buffer
-				strcat(lpszHolding,lpszData);
+				strcat_s(lpszHolding, dwSizeSum + dwDownloaded + 1, (const char*)lpszData);
 
 				// Writes the holding buffer to the textbox
 				SetDlgItemText(hX,intCtrlID,(LPSTR)lpszHolding);
