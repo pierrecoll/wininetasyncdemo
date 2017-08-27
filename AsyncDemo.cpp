@@ -137,22 +137,22 @@ BOOL CALLBACK AsyncURL(HWND hX, UINT message, WPARAM wParam,
 				LPSTR("http://www.microsoft.com"));
 
 
-			//initialize the first context value
+			//initialize the context value
 			rcContext.hWindow = hX;
 			rcContext.nURL = IDC_URL1;
 			rcContext.nHeader = IDC_Header1;
 			rcContext.nResource = IDC_Resource1;
-			sprintf(rcContext.szMemo, "AsyncURL(%d)", 
-				rcContext.nURL);
-
+			sprintf(rcContext.szMemo, "AsyncURL(%d)", rcContext.nURL);
 
 			//change the cursor back to normal
 			SetCursor(LoadCursor(NULL,IDC_ARROW));
 			return TRUE;
+
 		case WM_COMMAND:
 			switch(LOWORD(wParam))
 			{
-				case IDC_EXIT:
+				case 2:
+				case IDC_EXIT2:
 					//change the cursor
 					SetCursor(LoadCursor(NULL,IDC_WAIT));
 
@@ -163,6 +163,8 @@ BOOL CALLBACK AsyncURL(HWND hX, UINT message, WPARAM wParam,
 					SetCursor(LoadCursor(NULL,IDC_ARROW));
 					return TRUE;
 				case IDC_Download:
+					//Resets the callback list
+					SendDlgItemMessage(hX, IDC_CallbackList, LB_RESETCONTENT, 0, NULL);
 
 					hButton = GetDlgItem(hX, IDC_Download);
 					EnableWindow(hButton,0);
@@ -246,160 +248,404 @@ void AsyncDirect (REQUEST_CONTEXT *prcContext, HINTERNET hOpen)
   being returned),
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-void __stdcall Juggler	(HINTERNET hInternet, DWORD dwContext,
-							 DWORD dwInternetStatus,
-							 LPVOID lpvStatusInformation,
-							 DWORD dwStatusInformationLength)
+void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
+	DWORD dwInternetStatus,
+	LPVOID lpvStatusInformation,
+	DWORD dwStatusInformationLength)
 {
 	REQUEST_CONTEXT *cpContext;
-	char szBuffer[256];
-	cpContext= (REQUEST_CONTEXT*)dwContext;
+	char szBuffer[256 + INTERNET_MAX_URL_LENGTH] = "";
+	cpContext = (REQUEST_CONTEXT*)dwContext;
 
-	
-	
 
 	switch (dwInternetStatus)
 	{
-		case INTERNET_STATUS_CLOSING_CONNECTION:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: CLOSING_CONNECTION (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_CONNECTED_TO_SERVER:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: CONNECTED_TO_SERVER (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_CONNECTING_TO_SERVER:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: CONNECTING_TO_SERVER (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_CONNECTION_CLOSED:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: CONNECTION_CLOSED (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_HANDLE_CLOSING:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: HANDLE_CLOSING (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
+	case INTERNET_STATUS_CLOSING_CONNECTION:
+		//Closing the connection to the server. The lpvStatusInformation parameter is NULL.
+		sprintf(szBuffer, "CLOSING_CONNECTION");
+		break;
 
-			sprintf(cpContext->szMemo, "Closed");
-			
-			//check if the both resource handles are closing
-			//if so, enable the download button.
-			if (strcmp(rcContext.szMemo,"Closed")) 
+	case INTERNET_STATUS_CONNECTED_TO_SERVER:
+		//Successfully connected to the socket address (SOCKADDR) pointed to by lpvStatusInformation.
+		//points to sa_data value directly 
+		{
+			SOCKADDR *lpSockAddr = (SOCKADDR *)lpvStatusInformation;
+			if (lpSockAddr)
 			{
-				hButton = GetDlgItem(cpContext->hWindow, IDC_Download);
-				EnableWindow(hButton,1);
-			}
-			break;
-		case INTERNET_STATUS_HANDLE_CREATED:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: HANDLE_CREATED (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_INTERMEDIATE_RESPONSE:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: INTERMEDIATE_RESPONSE (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_NAME_RESOLVED:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: NAME_RESOLVED (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_RECEIVING_RESPONSE:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: RECEIVEING_RESPONSE (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_RESPONSE_RECEIVED:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: RESPONSE_RECEIVED (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_REDIRECT:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: REDIRECT (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_REQUEST_COMPLETE:
-
-			//check for errors
-			if (LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwError == 0)
-			{
-				//check if the completed request is from AsyncDirect
-				if (strcmp(cpContext->szMemo, "AsyncDirect"))
-				{
-					//set the resource handle to the HINTERNET handle 
-					//returned in the callback
-					cpContext->hResource = HINTERNET(
-						LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwResult);
-
-					//write the callback information to the buffer
-					sprintf(szBuffer,"%s: REQUEST_COMPLETE (%d)", 
-						cpContext->szMemo, dwStatusInformationLength);
-
-					//create a thread to handle the header and 
-					//resource download
-					cpContext->hThread = CreateThread(NULL, 0, 
-						(LPTHREAD_START_ROUTINE)Threader,LPVOID(cpContext), 0, 
-						&cpContext->dwThreadID);
-
-				}
-				else
-				{
-					sprintf(szBuffer,"%s(%d): REQUEST_COMPLETE (%d)", 
-						cpContext->szMemo,
-						cpContext->nURL, dwStatusInformationLength);
-				}
-
+				sprintf(szBuffer, "CONNECTED_TO_SERVER SockAddr : %s", lpvStatusInformation);
 			}
 			else
 			{
-				sprintf(szBuffer,
-					"%s: REQUEST_COMPLETE (%d) Error (%d) encountered", 
-					cpContext->szMemo, dwStatusInformationLength,
-					GetLastError());
-			}			
-			break;
-		case INTERNET_STATUS_REQUEST_SENT:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: REQUEST_SENT (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_RESOLVING_NAME:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: RESOLVING_NAME (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_SENDING_REQUEST:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: SENDING_REQUEST (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		case INTERNET_STATUS_STATE_CHANGE:
-			//write the callback information to the buffer
-			sprintf(szBuffer,"%s: STATE_CHANGE (%d)", 
-				cpContext->szMemo, dwStatusInformationLength);
-			break;
-		default:
-			//write the callback information to the buffer
-			//pierrelc bug %s
-			//sprintf(szBuffer, "%s: Unknown: Status %d Given", dwInternetStatus);
-			sprintf(szBuffer, " Unknown: Status %d Given", dwInternetStatus);
-			break;
+				sprintf(szBuffer, "CONNECTED_TO_SERVER");
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_CONNECTING_TO_SERVER:
+		//Connecting to the socket address (SOCKADDR) pointed to by lpvStatusInformation.
+		// points to sa_data value directly 
+		{
+			SOCKADDR *lpSockAddr = (SOCKADDR *)lpvStatusInformation;
+			if (lpSockAddr)
+			{
+				sprintf(szBuffer, "CONNECTING_TO_SERVER SockAddr : %s", lpvStatusInformation);
+			}
+			else
+			{
+				sprintf(szBuffer, "CONNECTED_TO_SERVER ");
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_CONNECTION_CLOSED:
+		//Successfully closed the connection to the server. The lpvStatusInformation parameter is NULL.
+		sprintf(szBuffer, "CONNECTION_CLOSED ");
+		break;
+
+	case INTERNET_STATUS_COOKIE_RECEIVED:
+		//Indicates the number of cookies that were accepted, rejected,
+		//downgraded (changed from persistent to session cookies), or
+		//leashed (will be sent out only in 1st party context).
+		//The lpvStatusInformation parameter is a DWORD with the number of cookies received.
+		{
+			if (lpvStatusInformation)
+			{
+				sprintf(szBuffer, "COOKIE_RECEIVED. Number : %d", (DWORD *)lpvStatusInformation);
+			}
+			else
+			{
+				sprintf(szBuffer, "COOKIE_RECEIVED ");
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_COOKIE_SENT:
+		//Indicates the number of cookies that were either sent or suppressed, when a request is sent.
+		//The lpvStatusInformation parameter is a DWORD with the number of cookies sent or suppressed.
+		//WRONG : it is a pointer to the number
+		{
+			if (lpvStatusInformation)
+			{
+				sprintf(szBuffer, "COOKIE_SENT. Number : %d", (DWORD *)lpvStatusInformation);
+			}
+			else
+			{
+				sprintf(szBuffer, "COOKIE_SENT ");
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_COOKIE_HISTORY:
+		//Retrieving content from the cache. Contains data about past cookie events for the URL such
+		//as if cookies were accepted, rejected, downgraded, or leashed.
+		//The lpvStatusInformation parameter is a pointer to an InternetCookieHistory structure.
+		{
+			if (lpvStatusInformation)
+			{
+				//The InternetCookieHistory structure contains the cookie hsitory.
+				//typedef struct _InternetCookieHistory
+				//{  BOOL fAccepted;  BOOL fLeashed;  BOOL fDowngraded;  BOOL fRejected;}
+				//InternetCookieHistory,  *PInternetCookieHistory;
+				//Members
+				//fAccepted If true, the cookies was accepted.
+				//fLeashed If true, the cookies was leashed.
+				//fDowngraded If true, the cookies was downgraded.
+				//fRejected If true, the cookies was rejected.
+
+				InternetCookieHistory *ICH = (InternetCookieHistory*)lpvStatusInformation;
+				sprintf(szBuffer, "COOKIE_HISTORY (%X)", lpvStatusInformation);
+			}
+			else
+			{
+				sprintf(szBuffer, "COOKIE_HISTORY ");
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_CTL_RESPONSE_RECEIVED:
+		//Not implemented.
+		sprintf(szBuffer, "CTL_RESPONSE_RECEIVED ");
+		break;
+
+	case INTERNET_STATUS_DETECTING_PROXY:
+		//Notifies the client application that a proxy has been detected.
+		sprintf(szBuffer, "DETECTING_PROXY ");
+		break;
+
+	case INTERNET_STATUS_HANDLE_CLOSING:
+		//This handle value has been terminated.
+		{
+			INTERNET_ASYNC_RESULT *lpInternetAsyncResult = (INTERNET_ASYNC_RESULT*)lpvStatusInformation;
+
+			if (lpInternetAsyncResult != NULL)
+			{
+				sprintf(szBuffer, "HANDLE_CLOSING Result: %X Error : %X", lpInternetAsyncResult->dwResult, lpInternetAsyncResult->dwError);
+			}
+			else
+			{
+				sprintf(szBuffer, "HANDLE_CLOSING (%d)",  dwStatusInformationLength);
+			}
+			sprintf(cpContext->szMemo, "Closed");
+			hButton = GetDlgItem(cpContext->hWindow, IDC_Download);	
+			EnableWindow(hButton, 1);
+		}
+		break;
+	case INTERNET_STATUS_HANDLE_CREATED:
+		//Used by InternetConnect to indicate it has created the new handle.
+		//This lets the application call InternetCloseHandle from another thread, if the connect is taking too long.
+		//The lpvStatusInformation parameter contains the address of an INTERNET_ASYNC_RESULT structure.
+		/*
+					
+		// INTERNET_ASYNC_RESULT - this structure is returned to the application via
+		// the callback with INTERNET_STATUS_REQUEST_COMPLETE. It is not sufficient to
+		// just return the result of the async operation. If the API failed then the
+		// app cannot call GetLastError() because the thread context will be incorrect.
+		// Both the value returned by the async API and any resultant error code are
+		// made available. The app need not check dwError if dwResult indicates that
+		// the API succeeded (in this case dwError will be ERROR_SUCCESS)
+		//
+
+		typedef struct {
+
+			//
+			// dwResult - the HINTERNET, DWORD or BOOL return code from an async API
+			//
+
+			DWORD_PTR dwResult;
+
+			//
+			// dwError - the error code if the API failed
+			//
+
+			DWORD dwError;
+		} INTERNET_ASYNC_RESULT, * LPINTERNET_ASYNC_RESULT;
+		*/
+
+		{
+			INTERNET_ASYNC_RESULT *lpInternetAsyncResult = (INTERNET_ASYNC_RESULT*)lpvStatusInformation;
+			if (lpInternetAsyncResult != NULL)
+			{
+				sprintf(szBuffer, "HANDLE_CREATED Result: %X Error : %X", lpInternetAsyncResult->dwResult, lpInternetAsyncResult->dwError);
+			}
+			else
+			{
+				sprintf(szBuffer, "HANDLE_CREATED ");
+			}
+		}
+		break;
+	case INTERNET_STATUS_INTERMEDIATE_RESPONSE:
+		//Received an intermediate (100 level) status code message from the server.
+		sprintf(szBuffer, "INTERMEDIATE_RESPONSE ");
+		break;
+
+	case INTERNET_STATUS_NAME_RESOLVED:
+		{
+			//Successfully found the IP address of the name contained in lpvStatusInformation.
+			if (lpvStatusInformation)
+			{
+				sprintf(szBuffer, "NAME_RESOLVED : %s", lpvStatusInformation);
+			}
+			else
+			{
+				sprintf(szBuffer, "NAME_RESOLVED ");
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_P3P_HEADER:
+		//The response has a P3P header in it.
+		sprintf(szBuffer, "P3P_HEADER ");
+		break;
+
+	case INTERNET_STATUS_P3P_POLICYREF:
+		//Not implemented
+		sprintf(szBuffer, "P3P_POLICYREF ");
+		break;
+
+	case INTERNET_STATUS_PREFETCH:
+		//Not implemented
+		sprintf(szBuffer, "PREFETCH ");
+		break;
+
+	case INTERNET_STATUS_PRIVACY_IMPACTED:
+		//Not implemented
+		sprintf(szBuffer, "PRIVACY_IMPACTED (%d)",
+			 dwStatusInformationLength);
+		break;
+
+	case INTERNET_STATUS_RECEIVING_RESPONSE:
+		//Waiting for the server to respond to a request. The lpvStatusInformation parameter is NULL.
+		sprintf(szBuffer, "RECEIVEING_RESPONSE (%d)",  dwStatusInformationLength);
+		break;
+
+	case INTERNET_STATUS_RESPONSE_RECEIVED:
+		{
+		//Successfully received a response from the server.
+		//The lpvStatusInformation parameter points to a DWORD value that contains the number, in bytes, received.
+			if (lpvStatusInformation)
+			{
+				sprintf(szBuffer, "RESPONSE_RECEIVED : %d bytes", *(DWORD *)lpvStatusInformation);
+			}
+			else
+			{
+				sprintf(szBuffer, "RESPONSE_RECEIVED ");
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_REDIRECT:
+		{
+			//An HTTP request is about to automatically redirect the request.
+			//The lpvStatusInformation parameter points to the new URL.
+			//At this point, the application can read any data returned by the server with the redirect
+			//response and can query the response headers.
+			//It can also cancel the operation by closing the handle.
+			//This callback is not made if the original request specified INTERNET_FLAG_NO_AUTO_REDIRECT.
+			if (lpvStatusInformation)
+			{
+				sprintf(szBuffer, "STATUS_REDIRECT . New URL: %s", lpvStatusInformation);
+			}
+			else
+			{
+				sprintf(szBuffer, "STATUS_REDIRECT ");
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_REQUEST_COMPLETE:
+		{
+			if (lpvStatusInformation)
+			{
+				//write the callback information to the buffer
+				sprintf(szBuffer, "REQUEST_COMPLETE Result:%X Error: %X", LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwResult,LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwError);
+				//check for errors
+				if (LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwError == 0)
+				{
+					//check if the completed request is from AsyncDirect
+					if (strtok(cpContext->szMemo, "AsyncDirect"))
+					{
+						//set the resource handle to the HINTERNET handle 
+						//returned in the callback
+						cpContext->hResource = HINTERNET(LPINTERNET_ASYNC_RESULT(lpvStatusInformation)->dwResult);
+
+						//create a thread to handle the header and 
+						//resource download
+						cpContext->hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Threader, LPVOID(cpContext), 0, &cpContext->dwThreadID);
+					}
+					else
+					{
+						sprintf(szBuffer, "(%d): REQUEST_COMPLETE (%d)", cpContext->nURL, dwStatusInformationLength);
+					}
+				}
+			}
+			else
+			{
+				sprintf(szBuffer, "REQUEST_COMPLETE (%d) Error (%d) encountered", dwStatusInformationLength, GetLastError());
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_REQUEST_SENT:
+		//Successfully sent the information request to the server.
+		//The lpvStatusInformation parameter points to a DWORD value that contains the number of bytes sent.
+		if (lpvStatusInformation)
+		{
+			sprintf(szBuffer, "REQUEST_SENT : %d bytes", *(DWORD *)lpvStatusInformation);
+		}
+		else
+		{
+			sprintf(szBuffer, "REQUEST_SENT ");
+		}
+		break;
+
+	case INTERNET_STATUS_RESOLVING_NAME:
+		{
+			//Looking up the IP address of the name contained in lpvStatusInformation.
+			if (lpvStatusInformation)
+			{
+				sprintf(szBuffer, "RESOLVING_NAME : %s", lpvStatusInformation);
+			}
+			else
+			{
+				sprintf(szBuffer, "RESOLVING_NAME ");
+			}
+		}
+		break;
+
+	case INTERNET_STATUS_SENDING_REQUEST:
+		//Sending the information request to the server. The lpvStatusInformation parameter is NULL.
+		sprintf(szBuffer, "SENDING_REQUEST ");
+		break;
+
+	case INTERNET_STATUS_STATE_CHANGE:
+		
+	{
+			//Moved between a secure (HTTPS) and a nonsecure (HTTP) site.
+			//The user must be informed of this change; otherwise, the user is at risk of disclosing
+			//sensitive information involuntarily. When this flag is set, the lpvStatusInformation parameter
+			//points to a status DWORD that contains additional flags.
+			//INTERNET_STATE_CONNECTED
+			//Connected state. Mutually exclusive with disconnected state.
+			//INTERNET_STATE_DISCONNECTED
+			//Disconnected state. No network connection could be established.
+			//INTERNET_STATE_DISCONNECTED_BY_USER
+			//Disconnected by user request.
+			//INTERNET_STATE_IDLE
+			//No network requests are being made by Windows Internet.
+			//INTERNET_STATE_BUSY
+			//Network requests are being made by Windows Internet.
+			//INTERNET_STATUS_USER_INPUT_REQUIRED
+			//The request requires user input to be completed.
+			DWORD dwStatus = *(DWORD*)lpvStatusInformation;
+
+
+			switch (dwStatus)
+			{
+			case INTERNET_STATE_CONNECTED:
+				sprintf(szBuffer, "STATE_CHANGE  : STATE_CONNECTED");
+				break;
+			case INTERNET_STATE_DISCONNECTED:
+				sprintf(szBuffer, "STATE_CHANGE  : STATE_DISCONNECTED");
+				break;
+			case INTERNET_STATE_DISCONNECTED_BY_USER:
+				sprintf(szBuffer, "STATE_CHANGE  : STATE_DISCONNECTED_BY_USER");
+				break;
+			case INTERNET_STATE_BUSY:
+				sprintf(szBuffer, "STATE_CHANGE  : STATE_BUSY");
+				break;
+
+			case INTERNET_STATUS_USER_INPUT_REQUIRED:
+				sprintf(szBuffer, "STATE_CHANGE  : STATUS_USER_INPUT_REQUIRED");
+				break;
+			default:
+				sprintf(szBuffer, "STATE_CHANGE  : unknown status");
+				break;
+			}
+		}
+		break;
+
+	default:
+		//write the callback information to the buffer
+		//pierrelc bug %s
+		//sprintf(szBuffer, "Unknown: Status %d Given", dwInternetStatus);
+		sprintf(szBuffer, " Unknown: Status %d Given", dwInternetStatus);
+		break;
 	}
+	char szExtraInformation[128];
+	sprintf(szExtraInformation," ( %X / %x) ", lpvStatusInformation, dwStatusInformationLength);
+	strcat(szBuffer, szExtraInformation);
 
 	//add the callback information to the callback list box
-	SendDlgItemMessage(cpContext->hWindow,IDC_CallbackList,
-		LB_ADDSTRING,0,(LPARAM)szBuffer);
-	
+	SendDlgItemMessage(cpContext->hWindow, IDC_CallbackList,LB_ADDSTRING, 0, (LPARAM)szBuffer);
+
+	if (iscCallback && (iscCallback != INTERNET_INVALID_STATUS_CALLBACK))
+	{
+		return (iscCallback(hInternet, dwContext,
+			dwInternetStatus,
+			lpvStatusInformation,
+			dwStatusInformationLength));
+	}
 }
-
-
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
