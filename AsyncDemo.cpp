@@ -55,7 +55,7 @@ typedef struct {
 
 
 //two instances of the structure
-static REQUEST_CONTEXT rcContext1, rcContext2;
+static REQUEST_CONTEXT rcContext;
 
 HWND hButton;
 
@@ -135,24 +135,16 @@ BOOL CALLBACK AsyncURL(HWND hX, UINT message, WPARAM wParam,
 			//set the default web sites
 			SetDlgItemText(hX,IDC_URL1,
 				LPSTR("http://www.microsoft.com"));
-			SetDlgItemText(hX,IDC_URL2,
-				LPSTR("http://home.microsoft.com"));
+
 
 			//initialize the first context value
-			rcContext1.hWindow = hX;
-			rcContext1.nURL = IDC_URL1;
-			rcContext1.nHeader = IDC_Header1;
-			rcContext1.nResource = IDC_Resource1;
-			sprintf(rcContext1.szMemo, "AsyncURL(%d)", 
-				rcContext2.nURL);
+			rcContext.hWindow = hX;
+			rcContext.nURL = IDC_URL1;
+			rcContext.nHeader = IDC_Header1;
+			rcContext.nResource = IDC_Resource1;
+			sprintf(rcContext.szMemo, "AsyncURL(%d)", 
+				rcContext.nURL);
 
-			//initialize the second context value
-			rcContext2.hWindow = hX;
-			rcContext2.nURL = IDC_URL2;
-			rcContext2.nHeader = IDC_Header2;
-			rcContext2.nResource = IDC_Resource2;
-			sprintf(rcContext2.szMemo, "AsyncURL(%d)", 
-				rcContext2.nURL);
 
 			//change the cursor back to normal
 			SetCursor(LoadCursor(NULL,IDC_ARROW));
@@ -177,13 +169,10 @@ BOOL CALLBACK AsyncURL(HWND hX, UINT message, WPARAM wParam,
 
 					//reset the edit boxes
 					SetDlgItemText(hX,IDC_Resource1,LPSTR(""));
-					SetDlgItemText(hX,IDC_Resource2,LPSTR(""));
 					SetDlgItemText(hX,IDC_Header1,LPSTR(""));
-					SetDlgItemText(hX,IDC_Header2,LPSTR(""));
 
 					//start the downloads
-					AsyncDirect(&rcContext1, hOpen);
-					AsyncDirect(&rcContext2, hOpen);
+					AsyncDirect(&rcContext, hOpen);
 					return TRUE;
 			}
 			return FALSE;
@@ -300,8 +289,7 @@ void __stdcall Juggler	(HINTERNET hInternet, DWORD dwContext,
 			
 			//check if the both resource handles are closing
 			//if so, enable the download button.
-			if ((strcmp(rcContext1.szMemo,"Closed")) ||
-				(strcmp(rcContext2.szMemo,"Closed")))
+			if (strcmp(rcContext.szMemo,"Closed")) 
 			{
 				hButton = GetDlgItem(cpContext->hWindow, IDC_Download);
 				EnableWindow(hButton,1);
