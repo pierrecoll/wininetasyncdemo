@@ -101,6 +101,22 @@ int WINAPI WinMain(HINSTANCE hThisInst, HINSTANCE hPrevInst,
 	{
 		//sets the callback function
 		iscCallback = InternetSetStatusCallback(hOpen, (INTERNET_STATUS_CALLBACK)Juggler);
+		DWORD dwSize;
+		InternetQueryOption(hOpen, INTERNET_OPTION_USER_AGENT, NULL, &dwSize);
+
+		// Allocate the necessary memory.
+		char *lpszData;
+		lpszData = new char[dwSize];
+
+		// Call InternetQueryOption again with the provided buffer.
+		InternetQueryOption(hOpen,
+			INTERNET_OPTION_USER_AGENT,
+			lpszData, &dwSize);
+
+		// Insert code here to use the user agent string data.
+
+		// Free the allocated memory.
+		delete[] lpszData;
 
 		//creates the dialog box
 		DialogBox(hThisInst,"DB_ASYNCDEMO", HWND_DESKTOP,(DLGPROC)AsyncURL);
@@ -424,7 +440,16 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 			INTERNET_ASYNC_RESULT *lpInternetAsyncResult = (INTERNET_ASYNC_RESULT*)lpvStatusInformation;
 			if (lpInternetAsyncResult != NULL)
 			{
-				sprintf_s(szBuffer, "HANDLE_CREATED Result: %X Error : %X", lpInternetAsyncResult->dwResult, lpInternetAsyncResult->dwError);
+				sprintf_s(szBuffer, "HANDLE_CREATED Handle: %X Error : %X", lpInternetAsyncResult->dwResult, lpInternetAsyncResult->dwError);
+				HINTERNET hHandleCreated = (HINTERNET)lpInternetAsyncResult->dwResult;
+				// This call determines the required buffer size.
+				DWORD dwSize = sizeof(DWORD);
+
+				DWORD dwReceiveTimeout = 0;
+				// Call InternetQueryOption again with the provided buffer.
+				InternetQueryOption(hHandleCreated,
+					INTERNET_OPTION_RECEIVE_TIMEOUT,
+					&dwReceiveTimeout, &dwSize);
 			}
 			else
 			{
@@ -482,7 +507,7 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 
 	case INTERNET_STATUS_RECEIVING_RESPONSE:
 		//Waiting for the server to respond to a request. The lpvStatusInformation parameter is NULL.
-		sprintf_s(szBuffer, "RECEIVEING_RESPONSE",  dwStatusInformationLength);
+		sprintf_s(szBuffer, "RECEIVEING_RESPONSE");
 		break;
 
 	case INTERNET_STATUS_RESPONSE_RECEIVED:
