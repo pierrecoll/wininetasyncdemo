@@ -1,1 +1,2 @@
-AsyncDemo is a sample application that demonstrates how to use the Win32 Internet functions asynchronously.  AsyncDemo is designed to take two HTTP URLs and start both downloads simultaneously.  For more information about using the Win32 Internet functions asynchronously, see Utilizing the Win32 Internet Functions Asynchronously in the Win32 Internet API documentation in the Web Workshop.  AsyncDemo is used in the Calling Win32 Internet Functions Asynchronously tutorial, which is also located in the Web Workshop.
+This is a tool to test winINet behavior based on the AsyncDemo sample which uses InternetOpenUrl WinINet API asynchronously. 
+The callback output has been improved to show the maximum of information like handle values and number of bytes received / sent.
