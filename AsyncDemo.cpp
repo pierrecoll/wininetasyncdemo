@@ -540,6 +540,7 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 						//create a thread to handle the header and 
 						//resource download
 						cpContext->hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Threader, LPVOID(cpContext), 0, &cpContext->dwThreadID);
+						//Threader(LPVOID(cpContext));
 					}
 					else
 					{
@@ -640,14 +641,18 @@ void __stdcall Juggler(HINTERNET hInternet, DWORD dwContext,
 		sprintf_s(szBuffer, " Unknown: Status %d Given", dwInternetStatus);
 		break;
 	}
-	char szExtraInformation[128];
-	sprintf_s(szExtraInformation," ( %X / %x) ", (unsigned int)lpvStatusInformation, (unsigned int)dwStatusInformationLength);
 	szBuffer[strlen(szBuffer)] = '\0';
-	szExtraInformation[strlen(szExtraInformation)] = '\0';
-	strcat_s(szBuffer, sizeof(szBuffer), szExtraInformation);
+	char szExtraInformation[128];
+	if (lpvStatusInformation) 
+	{
+		sprintf_s(szExtraInformation, " ( %X / %X / %x) ", (unsigned int)lpvStatusInformation, *(unsigned*)lpvStatusInformation, (unsigned int)dwStatusInformationLength);
+		szExtraInformation[strlen(szExtraInformation)] = '\0';
+		strcat_s(szBuffer, sizeof(szBuffer), szExtraInformation);
+	}
 
 	//add the callback information to the callback list box
-	SendDlgItemMessage(cpContext->hWindow, IDC_CallbackList,LB_ADDSTRING, 0, (LPARAM)szBuffer);
+	LRESULT index= SendDlgItemMessage(cpContext->hWindow, IDC_CallbackList,LB_ADDSTRING, 0, (LPARAM)szBuffer);
+	SendDlgItemMessage(cpContext->hWindow, IDC_CallbackList, LB_SETTOPINDEX, index, 0);
 
 	if (iscCallback && (iscCallback != INTERNET_INVALID_STATUS_CALLBACK))
 	{
